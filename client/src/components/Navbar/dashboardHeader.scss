@@ -1,0 +1,12 @@
+.d_header{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 100;
+    border-bottom: 1px solid rgb(58, 1, 41);
+}
+
+.header_logo {
+    object-fit: contain;
+    height: 40px ;
+}
