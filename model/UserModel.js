@@ -5,6 +5,10 @@ const bcrypt = require("bcryptjs");
 
 const UserSchema = mongoose.Schema(
   {
+    userId: {
+      type: String,
+    },
+
     firstName: {
       type: String,
       // required: [true, "Please add First Name"],
@@ -13,18 +17,27 @@ const UserSchema = mongoose.Schema(
       type: String,
       // required: [true, "Please add Lasr Name"],
     },
-    dobDay: {
-      type: Number,
-      // required: [true, "Please add Your Date of Birth"],
+    dogs: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Dog",
+      },
+    ],
+    dateOfBirth: {
+      dobDay: {
+        type: Number,
+        // required: [true, "Please add Your Date of Birth"],
+      },
+      dobMonth: {
+        type: Number,
+        // required: [true, "Please add Your Date of Birth"],
+      },
+      dobYear: {
+        type: Number,
+        // required: [true, "Please add Your Date of Birth"],
+      },
     },
-    dobMonth: {
-      type: Number,
-      // required: [true, "Please add Your Date of Birth"],
-    },
-    dobYear: {
-      type: Number,
-      // required: [true, "Please add Your Date of Birth"],
-    },
+
     showGender: {
       type: String,
       // required: [true, "Please add Address"],
@@ -37,21 +50,25 @@ const UserSchema = mongoose.Schema(
       type: String,
       // required: [true, "Please add Address"],
     },
+    preferredBreeds: [{type: String}],
+    ageRange: {
+      min: {type: Number},
+      max: {type: Number},
+    },
+    sizeCompatibility: {type: String}, // Small, Medium, Large, etc.
+    restrictions: {type: String}, //any special requirements or restrictions
     address: {
-      type: String,
-      // required: [true, "Please add Address"],
+      street: {type: String},
+      city: {type: String},
+      state: {type: String},
+      postalCode: {type: String},
+      country: {type: String},
     },
-    State: {
-      type: String,
-      // required: [true, "Please add State"],
-    },
-    LGA: {
-      type: String,
-      // required: [true, "Please add LGA"],
-    },
-    street: {
-      type: String,
-      // required: [true, "Please add Street"],
+    socialMedia: {
+      facebook: {type: String},
+      instagram: {type: String},
+      twitter: {type: String},
+      linkdin: {type: String},
     },
     matches: {
       type: Array,
@@ -122,7 +139,7 @@ const UserSchema = mongoose.Schema(
 //   }
 // };
 
-const User = mongoose.model("Users", UserSchema);
+const User = mongoose.model("User", UserSchema);
 //---------------------------- End of Mongoose-----------------------
 
 module.exports = User;

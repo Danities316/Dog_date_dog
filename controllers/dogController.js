@@ -1,105 +1,226 @@
-//writing my own try/catch for async/await and passes error on to next.
-const asyncHandler = require("express-async-handler");
 const Dogs = require("../model/DogModel");
 const User = require("../model/UserModel");
+
 //@desc     Regster new Dog
 //@route    POST /api/dogs
 //@access   Public
-const registerDog = asyncHandler(async (req, res) => {
-  const data = {
-    user: req.user.id,
-    DogDateOfBirth: req.body.DogDateOfBirth,
-    DogType: req.body.DogType,
-    DogDescrition: req.body.DogDescrition,
-    DogBread: req.body.DogBread,
-    Sex: req.body.Sex,
-    photo: req.body.photo,
-    petname: req.body.petname,
-  };
-  // console.log(data)
-  if (!data) {
-    res.status(400);
-    throw new Error("Please add a dog details");
+const registerDog = async (req, res) => {
+  try {
+    const {
+      name,
+      breed,
+      dobDay,
+      dobMonth,
+      dobYear,
+      showGender,
+      genderId,
+      genderInterest,
+      sex,
+      photo,
+      EnergyLevel,
+      Friendliness,
+      Playfulness,
+      Aggressiveness,
+      owner,
+    } = req.body;
+
+    const newDog = new Dogs({
+      name,
+      breed,
+      dobDay,
+      dobMonth,
+      dobYear,
+      showGender,
+      genderId,
+      genderInterest,
+      sex,
+      photo,
+      EnergyLevel,
+      Friendliness,
+      Playfulness,
+      Aggressiveness,
+      owner,
+    });
+
+    // console.log(data)
+    if (!newDog) {
+      res.status(400);
+      throw new Error("Please add a dog details");
+    }
+    await newDog.save();
+    res.status(201).json({success: true, dog: newDog});
+  } catch (error) {
+    res
+      .status(500)
+      .json({success: false, message: "Error creating dog profile", error});
   }
-  const dog = await Dogs.create(data);
-  //    console.log(dog)
-  res.status(200).json(dog);
-});
+};
 
 //@desc    Get all Dogs Details by user
 //@route    GET /api/dogs/data
 //@access   Public
-const getDog = asyncHandler(async (req, res) => {
-  // get req.user.id is coming from the authMiddleware
-  const dogs = await Dogs.find({user: req.user.id});
-  res.status(200).json(dogs);
-});
+const getAllDogs = async (req, res) => {
+  try {
+    const dogs = await Dogs.find();
+    res.status(200).json({success: true, dogs});
+  } catch (error) {
+    res
+      .status(500)
+      .json({success: false, message: "Error fetching dog profiles", error});
+  }
+};
 
-//@desc    Get all Dogs Details
-//@route    GET /api/dogs/data
+//@desc    Get all Dogs Details of a single owner
+//@route    GET /api/dogs/:userId
 //@access   Public
-const getAllDog = asyncHandler(async (req, res) => {
+const getAllDogsByUser = async (req, res) => {
   // get req.user.id is coming from the authMiddleware
-  const dogs = await Dogs.find({});
-  res.status(200).json(dogs);
-});
+  try {
+    const userId = req.params.userId;
+    const dogs = await Dogs.find({user: userId});
 
-//@desc     Get User data
+    if (!dogs || dogs.length === 0) {
+      return res
+        .status(404)
+        .json({success: false, message: "No dogs found for the owner"});
+    }
+
+    res.status(200).json({success: true, dogs});
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error fetching dogs for the owner",
+      error,
+    });
+  }
+};
+
+//@desc    Get all Dogs Details of a single owner
+//@route    GET /api/dogs/:id
+//@access   Public
+const getDogById = async (req, res) => {
+  try {
+    const {id} = req.params;
+    const dog = await Dogs.findById(id);
+
+    if (!dog) {
+      return res
+        .status(404)
+        .json({success: false, message: "Dog profile not found"});
+    }
+
+    res.status(200).json({success: true, dog});
+  } catch (error) {
+    res
+      .status(500)
+      .json({success: false, message: "Error fetching dog profile", error});
+  }
+};
+
+//@desc     Delete Dog data
 //@route    DELETE /api/dogs/:id
 //@access   Private
-const deleteDog = asyncHandler(async (req, res) => {
-  const dog = await Dogs.findById(req.params.id);
-  if (!dog) {
-    res.status(400);
-    throw new Error("Dog not Found!");
-  }
+const deleteDog = async (req, res) => {
+  try {
+    // Check if the user is authenticated
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized: User must be logged in to delete a dog",
+      });
+    }
 
-  //check user
-  if (!req.user) {
-    res.status(401);
-    throw new Error("User not found!");
-  }
-  //Ensure the logged in user matches dog user
-  if (dog.user.toString() !== req.user.id) {
-    res.status(401);
-    throw new Error("User not Authorized!");
-  }
+    const {id} = req.params;
 
-  await dog.remove();
-  res.status(200).json({id: req.params.id});
-});
+    // Check if the dog owner is the logged-in user
+    const dog = await Dogs.findById(id);
 
-//@desc     Get User data
+    if (!dog) {
+      return res
+        .status(404)
+        .json({success: false, message: "Dog profile not found"});
+    }
+
+    if (dog.owner.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden: You are not the owner of this dog",
+      });
+    }
+
+    const deletedDog = await Dogs.findByIdAndRemove(id);
+
+    if (!deletedDog) {
+      return res
+        .status(404)
+        .json({success: false, message: "Dog profile not found"});
+    }
+
+    res
+      .status(200)
+      .json({success: true, message: "Dog profile deleted successfully"});
+  } catch (error) {
+    res
+      .status(500)
+      .json({success: false, message: "Error deleting dog profile", error});
+  }
+};
+
+//@desc     Update Dog data
 //@route    UPDATE /api/dogs/m:id
 //@access   Private
-const updateDog = asyncHandler(async (req, res) => {
-  const dog = await Dogs.findById(req.params.id);
-  if (!dog) {
-    res.status(400);
-    throw new Error("Dog not Found!");
-  }
+const updateDog = async (req, res) => {
+  try {
+    // Check if the user is authenticated
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized: User must be logged in to update a dog",
+      });
+    }
 
-  //check user -  User is coming from authMiddleware
-  if (!req.user) {
-    res.status(401);
-    throw new Error("User not found!");
-  }
-  //Ensure the logged in user matches dog user
-  if (dog.user.toString() !== req.user.id) {
-    res.status(401);
-    throw new Error("User not Authorized!");
-  }
+    const {id} = req.params;
+    const updatedData = req.body;
 
-  const updateDog = await Dogs.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-  });
-  res.status(200).json(updateDog);
-});
+    // Check if the dog owner is the logged-in user
+    const dog = await Dogs.findById(id);
+
+    if (!dog) {
+      return res
+        .status(404)
+        .json({success: false, message: "Dog profile not found"});
+    }
+    //Ensure the logged in user matches dog user
+    if (dog.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden: You are not the owner of this dog",
+      });
+    }
+
+    const updatedDog = await Dogs.findByIdAndUpdate(id, updatedData, {
+      new: true,
+    });
+
+    if (!updatedDog) {
+      return res
+        .status(404)
+        .json({success: false, message: "Dog profile not found"});
+    }
+
+    res.status(200).json({success: true, dog: updatedDog});
+  } catch (error) {
+    res
+      .status(500)
+      .json({success: false, message: "Error updating dog profile", error});
+  }
+};
 
 module.exports = {
   registerDog,
-  getDog,
-  getAllDog,
+  getDogById,
+  getAllDogsByUser,
+  getAllDogs,
   deleteDog,
   updateDog,
 };
